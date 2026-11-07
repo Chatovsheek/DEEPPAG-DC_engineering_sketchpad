@@ -3,6 +3,8 @@
 
 **Лёгкий чертёжный инструмент в браузере.** 2D-черчение с размерами по ГОСТ, рамкой и штампом, привязкой к геометрии. Один HTML-файл, интернет не нужен.
 
+🌐 **Онлайн-версия:** [chatovsheek.github.io/DEEPPAG-DC_engineering_sketchpad](https://chatovsheek.github.io/DEEPPAG-DC_engineering_sketchpad/)
+
 ## 🚀 Быстрый старт
 1. Открыть файл в Chrome, Edge или Firefox
 2. Выбрать инструмент и рисовать
