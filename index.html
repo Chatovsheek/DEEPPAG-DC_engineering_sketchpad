@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEEP_PAG_инженерный эскизник</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Crect%20width%3D%2764%27%20height%3D%2764%27%20rx%3D%2712%27%20fill%3D%27%2316213e%27/%3E%3Cg%20stroke%3D%27%23eeeeee%27%20stroke-width%3D%273%27%20stroke-linecap%3D%27round%27%20fill%3D%27none%27%3E%3Cpath%20d%3D%27M32%2014%20L19%2050%20M32%2014%20L45%2050%27/%3E%3Cpath%20d%3D%27M24%2038%20H40%27%20stroke%3D%27%23e94560%27/%3E%3C/g%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2712%27%20r%3D%274%27%20fill%3D%27%23e94560%27/%3E%3Crect%20x%3D%2710%27%20y%3D%2752%27%20width%3D%2744%27%20height%3D%277%27%20rx%3D%271.5%27%20fill%3D%27%23f0c040%27/%3E%3Cpath%20d%3D%27M16%2052v3M22%2052v4M28%2052v3M34%2052v4M40%2052v3M46%2052v4%27%20stroke%3D%27%2316213e%27%20stroke-width%3D%271.5%27/%3E%3C/svg%3E">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; display: flex; height: 100vh; overflow: hidden; }
+  .sidebar { width: 280px; background: #16213e; padding: 12px; display: flex; flex-direction: column; gap: 8px; border-right: 1px solid #0f3460; overflow-y: auto; }
+  .sidebar h3 { font-size: 13px; color: #e94560; margin-bottom: 4px; }
+  .btn-group { display: flex; flex-wrap: wrap; gap: 4px; }
+  .btn { background: #0f3460; border: 1px solid #1a4a7a; color: #eee; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: 0.2s; }
+  .btn:hover { background: #1a4a7a; }
+  .btn.active { background: #e94560; border-color: #e94560; color: #fff; }
+  .btn-sm { padding: 4px 8px; font-size: 12px; }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .row label { font-size: 12px; color: #aaa; }
+  input[type="number"], input[type="text"], select { background: #0f3460; border: 1px solid #1a4a7a; color: #eee; padding: 4px 8px; border-radius: 4px; font-size: 13px; width: 70px; }
+  .canvas-wrap { flex: 1; position: relative; overflow: hidden; background: #0d0d1a; }
+  canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+  .status { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.7); padding: 4px 12px; border-radius: 4px; font-size: 12px; color: #aaa; pointer-events: none; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 100; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: #16213e; border: 1px solid #0f3460; border-radius: 12px; padding: 24px; min-width: 320px; max-width: 500px; }
+  .modal h3 { margin-bottom: 12px; }
+  .modal { max-height: 90vh; overflow-y: auto; }
+  .modal input[type="text"] { width: 200px; }
+  .modal .row { margin-bottom: 8px; }
+  .color-picker { display: flex; gap: 4px; flex-wrap: wrap; }
+  .color-swatch { width: 24px; height: 24px; border-radius: 4px; border: 2px solid transparent; cursor: pointer; }
+  .color-swatch.active { border-color: #e94560; }
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <h3>📐 Инструменты</h3>
+  <div class="btn-group">
+    <button class="btn active" data-tool="line">📏 Линия</button>
+    <button class="btn" data-tool="rect">⬛ Прямоугольник</button>
+    <button class="btn" data-tool="circle">⚪ Окружность</button>
+    <button class="btn" data-tool="dim">📏 Размер</button>
+    <button class="btn" data-tool="select">🖱️ Выбрать</button>
+    <button class="btn" data-tool="text">🔤 Текст</button>
+    <button class="btn" data-tool="eraser">🧽 Ластик</button>
+  </div>
+
+  <h3>🎮 Режимы</h3>
+  <div class="btn-group">
+    <button class="btn active" id="autoModeBtn">🤖 Авторежим</button>
+    <button class="btn" id="manualModeBtn">✏️ Ручной режим</button>
+  </div>
+
+  <h3>⚙️ Действия</h3>
+  <div class="btn-group">
+    <button class="btn btn-sm" id="undoBtn">↩️ Отменить (Ctrl+Z)</button>
+    <button class="btn btn-sm" id="clearBtn">🗑️ Очистить</button>
+    <button class="btn btn-sm" id="update3dBtn">🔺 Обновить 3D</button>
+  </div>
+
+  <h3>📏 Сетка</h3>
+  <div class="row">
+    <label>Шаг (мм):</label>
+    <input type="number" id="gridSize" value="10" min="1" max="100">
+    <button class="btn btn-sm" id="applyGrid">Применить</button>
+  </div>
+
+  <h3>📐 Поле</h3>
+  <div class="row">
+    <label>Ш x В (м):</label>
+    <input type="number" id="fieldW" value="12" min="1" max="50" step="0.5">
+    <input type="number" id="fieldH" value="9" min="1" max="50" step="0.5">
+    <button class="btn btn-sm" id="applyField">Применить</button>
+  </div>
+
+  <h3>📋 Рамка (ГОСТ)</h3>
+  <div class="row">
+    <select id="frameSel" style="width:80px"><option value="none">Нет</option><option value="A4">A4</option><option value="A3">A3</option></select>
+    <select id="frameScaleSel" style="width:90px"></select>
+    <button class="btn btn-sm" id="stampBtn">✏️ Штамп</button>
+  </div>
+
+  <h3>🎨 Стиль</h3>
+  <div class="row"><label>Фон поля:</label><button class="btn btn-sm" id="themeBtn">⚪ Белый фон</button></div>
+  <div class="row">
+    <label>Цвет:</label>
+    <div class="color-picker" id="colorPicker">
+      <div class="color-swatch active" style="background:#ffffff" data-color="#ffffff"></div>
+      <div class="color-swatch" style="background:#e94560" data-color="#e94560"></div>
+      <div class="color-swatch" style="background:#0f3460" data-color="#0f3460"></div>
+      <div class="color-swatch" style="background:#f0c040" data-color="#f0c040"></div>
+      <div class="color-swatch" style="background:#40c040" data-color="#40c040"></div>
+    </div>
+  </div>
+  <div class="row">
+    <label>📏 Толщина:</label>
+    <select id="lineWidth">
+      <option value="1">1 px</option><option value="2" selected>2 px</option>
+      <option value="3">3 px</option><option value="4">4 px</option>
+      <option value="5">5 px</option><option value="6">6 px</option>
+    </select>
+  </div>
+  <div class="row">
+    <label>📐 Тип линии:</label>
+    <select id="lineType">
+      <option value="solid">━━━ Сплошная</option>
+      <option value="dashed">_ _ _ Штриховая</option>
+      <option value="dashdot">_ . _ . Штрих-пунктирная</option>
+      <option value="dotted">• • • Пунктирная</option>
+    </select>
+  </div>
+  <div class="row">
+    <label>🔤 Шрифт размеров:</label>
+    <select id="fontSizeDim">
+      <option value="12">12</option><option value="14">14</option>
+      <option value="16">16</option><option value="18" selected>18</option>
+      <option value="20">20</option>
+    </select>
+  </div>
+  <div class="row">
+    <label>🧽 Толщина ластика:</label>
+    <select id="eraserWidth">
+      <option value="10">10 px</option><option value="20" selected>20 px</option>
+      <option value="30">30 px</option>
+      <option value="50">50 px</option>
+    </select>
+  </div>
+
+  <div class="row">
+    <button class="btn btn-sm" id="zoomOut">−</button>
+    <span id="zoomLabel">100%</span>
+    <button class="btn btn-sm" id="zoomIn">+</button>
+    <button class="btn btn-sm" id="zoomReset">⟳</button>
+  </div>
+
+  <h3>📤 Экспорт / Импорт</h3>
+  <div class="btn-group">
+    <button class="btn btn-sm" id="saveJsonBtn">💾 Сохранить JSON (встроенный)</button>
+    <button class="btn btn-sm" id="importJsonBtn">📂 Импорт JSON (встроенный)</button>
+  </div>
+  <button class="btn" id="savePdfBtn">💾 Сохранить: PDF / PNG / SVG</button>
+</div>
+
+<div class="canvas-wrap" id="canvasWrap">
+  <canvas id="mainCanvas"></canvas>
+  <div class="status" id="statusBar">✅ Готов</div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3 id="modalTitle">ПАРАМЕТРЫ</h3>
+    <div id="modalBody"></div>
+    <div class="row">
+      <button class="btn" id="modalOk">✅ Применить</button>
+      <button class="btn" id="modalCancel">❌ Отмена</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DEEP_PAG_инженерный эскизник — финальная версия
+// ============================================================
+
+const state = {
+  objects: [],
+  history: [],
+  tool: 'line',
+  color: '#ffffff',
+  lineWidth: 2,
+  lineType: 'solid',
+  fontSizeDim: 18,
+  gridSize: 10,
+  fieldW: 12000,
+  fieldH: 9000,
+  zoom: 1,
+  panX: 0,
+  panY: 0,
+  drawing: false,
+  startX: 0, startY: 0,
+  currentX: 0, currentY: 0,
+  selectedId: null,
+  dragOffset: null,
+  manualMode: false,
+  eraserWidth: 20,
+  theme: 'dark',
+  dimPending: null,
+  frame: 'none',
+  frameScale: 'auto',
+  stamp: {},
+  pendingSnap: null,
+  editSnap: null,
+};
+
+const THEMES = {
+  dark:  { bg: '#0d0d1a', grid: 'rgba(255,255,255,0.06)', dim: '#ffff00', field: 'rgba(255,255,255,0.25)' },
+  light: { bg: '#ffffff', grid: 'rgba(0,0,0,0.12)',       dim: '#000000', field: 'rgba(0,0,0,0.25)' }
+};
+function bgColor() { return THEMES[state.theme].bg; }
+let pxk = 1, showGrid = true;
+
+const canvas = document.getElementById('mainCanvas');
+let ctx = canvas.getContext('2d');
+const wrap = document.getElementById('canvasWrap');
+const statusBar = document.getElementById('statusBar');
+
+const autoModeBtn = document.getElementById('autoModeBtn');
+const manualModeBtn = document.getElementById('manualModeBtn');
+
+function resizeCanvas() {
+  canvas.width = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+  render();
+}
+
+function mmToScreen(mmX, mmY) {
+  const cx = ctx.canvas.width / 2 + state.panX;
+  const cy = ctx.canvas.height / 2 + state.panY;
+  return { x: cx + mmX * state.zoom, y: cy - mmY * state.zoom };
+}
+
+function screenToMm(sx, sy) {
+  const cx = ctx.canvas.width / 2 + state.panX;
+  const cy = ctx.canvas.height / 2 + state.panY;
+  return { mmX: (sx - cx) / state.zoom, mmY: (cy - sy) / state.zoom };
+}
+
+function snapToGeometry(mmX, mmY, threshold = 5) {
+  const th = threshold / state.zoom;
+  let bestDist = th;
+  let best = { mmX, mmY };
+  let snapped = false;
+
+  for (const obj of state.objects) {
+    if (obj.type === 'rect') {
+      const corners = [
+        { mmX: obj.x, mmY: obj.y },
+        { mmX: obj.x + obj.w, mmY: obj.y },
+        { mmX: obj.x, mmY: obj.y + obj.h },
+        { mmX: obj.x + obj.w, mmY: obj.y + obj.h },
+      ];
+      for (const c of corners) {
+        const d = Math.hypot(c.mmX - mmX, c.mmY - mmY);
+        if (d < bestDist) { bestDist = d; best = c; snapped = true; }
+      }
+    }
+    if (obj.type === 'line') {
+      const ends = [{ mmX: obj.x, mmY: obj.y }, { mmX: obj.x2, mmY: obj.y2 }];
+      for (const e of ends) {
+        const d = Math.hypot(e.mmX - mmX, e.mmY - mmY);
+        if (d < bestDist) { bestDist = d; best = e; snapped = true; }
+      }
+    }
+    if (obj.type === 'circle') {
+      const d = Math.hypot(obj.x - mmX, obj.y - mmY);
+      if (d < bestDist) { bestDist = d; best = { mmX: obj.x, mmY: obj.y }; snapped = true; }
+    }
+    if (obj.type === 'text') {
+      const d = Math.hypot(obj.x - mmX, obj.y - mmY);
+      if (d < bestDist) { bestDist = d; best = { mmX: obj.x, mmY: obj.y }; snapped = true; }
+    }
+    if (obj.type === 'dim') {
+      const pts = [{ mmX: obj.x, mmY: obj.y }, { mmX: obj.x2, mmY: obj.y2 }];
+      for (const p of pts) {
+        const d = Math.hypot(p.mmX - mmX, p.mmY - mmY);
+        if (d < bestDist) { bestDist = d; best = p; snapped = true; }
+      }
+    }
+  }
+  const g = state.gridSize;
+  const gridSnap = { mmX: Math.round(mmX / g) * g, mmY: Math.round(mmY / g) * g };
+  if (Math.hypot(gridSnap.mmX - mmX, gridSnap.mmY - mmY) < bestDist) {
+    best = gridSnap; snapped = true;
+  }
+  return { ...best, snapped };
+}
+
+function render() {
+  const c = ctx.canvas, live = c === canvas;
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.fillStyle = bgColor();
+  ctx.fillRect(0, 0, c.width, c.height);
+  if (showGrid) drawGrid();
+  if (live) drawField();
+  drawFrame();
+  drawObjects();
+  if (live) drawPreview();
+}
+
+function drawField() {
+  const a = mmToScreen(-state.fieldW / 2, state.fieldH / 2), b = mmToScreen(state.fieldW / 2, -state.fieldH / 2);
+  ctx.save();
+  ctx.strokeStyle = THEMES[state.theme].field;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([6, 6]);
+  ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
+  ctx.restore();
+}
+
+function drawGrid() {
+  const g = state.gridSize * state.zoom;
+  if (g < 4) return;
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  const o = mmToScreen(0, 0);
+  ctx.save();
+  ctx.strokeStyle = THEMES[state.theme].grid;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([]);
+  for (let x = ((o.x % g) + g) % g; x < W; x += g) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = ((o.y % g) + g) % g; y < H; y += g) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  ctx.restore();
+}
+
+function getLineDash(type) {
+  switch(type) {
+    case 'dashed': return [8, 6];
+    case 'dashdot': return [10, 4, 2, 4];
+    case 'dotted': return [2, 4];
+    default: return [];
+  }
+}
+
+function arrowHead(x, y, dx, dy, sz) {
+  ctx.save(); ctx.setLineDash([]); ctx.shadowBlur = 0;
+  ctx.beginPath(); ctx.moveTo(x, y);
+  ctx.lineTo(x - dx * sz + dy * sz * 0.18, y - dy * sz - dx * sz * 0.18);
+  ctx.lineTo(x - dx * sz - dy * sz * 0.18, y - dy * sz + dx * sz * 0.18);
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+
+// линейный размер: две измеряемые точки + смещение размерной линии off (мм), выносные линии, стрелки, надпись вдоль линии
+function drawDimShape(d) {
+  const S1 = mmToScreen(d.x, d.y), S2 = mmToScreen(d.x2, d.y2);
+  const dx = S2.x - S1.x, dy = S2.y - S1.y, len = Math.hypot(dx, dy);
+  if (len < 1) return;
+  const tx = dx / len, ty = dy / len, nx = ty, ny = -tx;
+  const o = (d.off || 0) * state.zoom, sg = o < 0 ? -1 : 1, g = 2 * pxk, e = 5 * pxk;
+  const D1 = { x: S1.x + nx * o, y: S1.y + ny * o }, D2 = { x: S2.x + nx * o, y: S2.y + ny * o };
+  ctx.beginPath();
+  if (Math.abs(o) > g) {
+    ctx.moveTo(S1.x + nx * sg * g, S1.y + ny * sg * g); ctx.lineTo(D1.x + nx * sg * e, D1.y + ny * sg * e);
+    ctx.moveTo(S2.x + nx * sg * g, S2.y + ny * sg * g); ctx.lineTo(D2.x + nx * sg * e, D2.y + ny * sg * e);
+  }
+  ctx.moveTo(D1.x, D1.y); ctx.lineTo(D2.x, D2.y); ctx.stroke();
+  arrowHead(D1.x, D1.y, -tx, -ty, 12 * pxk); arrowHead(D2.x, D2.y, tx, ty, 12 * pxk);
+  let ang = Math.atan2(ty, tx); if (ang > Math.PI / 2 || ang <= -Math.PI / 2) ang += Math.PI;
+  ctx.save(); ctx.setLineDash([]); ctx.shadowBlur = 0;
+  ctx.fillStyle = THEMES[state.theme].dim; ctx.font = `${state.fontSizeDim * pxk}px monospace`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.translate((D1.x + D2.x) / 2, (D1.y + D2.y) / 2); ctx.rotate(ang);
+  ctx.fillText(Math.hypot(d.x2 - d.x, d.y2 - d.y).toFixed(1) + ' мм', 0, -4 * pxk);
+  ctx.restore();
+}
+
+function drawObjects() {
+  const T = THEMES[state.theme], light = state.theme === 'light', live = ctx.canvas === canvas;
+  const fs = state.fontSizeDim * pxk;
+  state.objects.forEach((obj, i) => {
+    ctx.save();
+    const col = obj.isEraser ? T.bg : (light ? '#000000' : (obj.color || state.color));
+    ctx.strokeStyle = col; ctx.fillStyle = col;
+    ctx.lineWidth = (obj.lineWidth || state.lineWidth) * pxk;
+    ctx.setLineDash(getLineDash(obj.lineType || 'solid').map(v => v * pxk));
+    if (live && i === state.selectedId) { ctx.shadowColor = '#e94560'; ctx.shadowBlur = 8; }
+    const label = (t, x, y, al) => {
+      ctx.save(); ctx.shadowBlur = 0; ctx.setLineDash([]);
+      ctx.fillStyle = T.dim; ctx.font = `${fs}px monospace`; ctx.textAlign = al || 'center';
+      ctx.fillText(t, x, y); ctx.restore();
+    };
+    const showDims = !obj.isEraser && !state.manualMode;
+    if (obj.type === 'line') {
+      const p1 = mmToScreen(obj.x, obj.y), p2 = mmToScreen(obj.x2, obj.y2);
+      ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+      if (showDims && obj.showLength !== false) {
+        const mid = mmToScreen((obj.x + obj.x2) / 2, (obj.y + obj.y2) / 2);
+        label(Math.hypot(obj.x2 - obj.x, obj.y2 - obj.y).toFixed(1) + ' мм', mid.x, mid.y - 8 * pxk);
+      }
+    } else if (obj.type === 'rect') {
+      const p1 = mmToScreen(obj.x, obj.y), p2 = mmToScreen(obj.x + obj.w, obj.y + obj.h);
+      ctx.strokeRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
+      if (showDims) {
+        const a = mmToScreen(obj.x + obj.w / 2, obj.y - 15), b = mmToScreen(obj.x + obj.w + 15, obj.y + obj.h / 2);
+        label(obj.w.toFixed(1) + ' мм', a.x, a.y);
+        label(obj.h.toFixed(1) + ' мм', b.x, b.y, 'left');
+      }
+    } else if (obj.type === 'circle') {
+      const c = mmToScreen(obj.x, obj.y), r = obj.r * state.zoom;
+      ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI * 2); ctx.stroke();
+      if (showDims) {
+        const u = Math.SQRT1_2, A = { x: c.x - u * r, y: c.y + u * r }, Bp = { x: c.x + u * r, y: c.y - u * r };
+        ctx.save(); ctx.setLineDash([]); ctx.lineWidth = pxk;
+        ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(Bp.x, Bp.y); ctx.stroke(); ctx.restore();
+        arrowHead(A.x, A.y, -u, u, 12 * pxk); arrowHead(Bp.x, Bp.y, u, -u, 12 * pxk);
+        label(`⌀ ${(obj.r * 2).toFixed(1)} мм`, Bp.x + 10 * pxk, Bp.y - 4 * pxk, 'left');
+        if (obj.showCirc) label(`L=${(2 * Math.PI * obj.r).toFixed(1)} мм`, Bp.x + 10 * pxk, Bp.y - 4 * pxk + fs * 1.15, 'left');
+      }
+    } else if (obj.type === 'dim') {
+      drawDimShape(obj);
+    } else if (obj.type === 'text') {
+      const p = mmToScreen(obj.x, obj.y);
+      ctx.font = `${(obj.font || 12) * pxk}px monospace`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(obj.text || '', p.x, p.y);
+    }
+    ctx.restore();
+  });
+}
+
+function drawPreview() {
+  if (state.dimPending) { ctx.save(); ctx.strokeStyle = ctx.fillStyle = '#e94560'; ctx.lineWidth = 1; drawDimShape(state.dimPending); ctx.restore(); }
+  if (!state.drawing) return;
+  const snapped = snapToGeometry(state.currentX, state.currentY);
+  const p1 = mmToScreen(state.startX, state.startY);
+  const p2 = mmToScreen(snapped.mmX, snapped.mmY);
+  ctx.strokeStyle = 'rgba(233,69,96,0.6)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  if (state.tool === 'line' || state.tool === 'eraser') {
+    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+  }
+  if (state.tool === 'rect') { ctx.strokeRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y); }
+  if (state.tool === 'circle') {
+    const r = Math.hypot(snapped.mmX - state.startX, snapped.mmY - state.startY) * state.zoom;
+    ctx.beginPath(); ctx.arc(p1.x, p1.y, r, 0, Math.PI*2); ctx.stroke();
+  }
+  if (state.tool === 'dim') { ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); }
+  ctx.setLineDash([]);
+  if (snapped.snapped) {
+    const sp = mmToScreen(snapped.mmX, snapped.mmY);
+    ctx.fillStyle = '#e94560'; ctx.beginPath(); ctx.arc(sp.x, sp.y, 4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(233,69,96,0.2)'; ctx.beginPath(); ctx.arc(sp.x, sp.y, 12, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+function addObject(obj) {
+  state.history.push(JSON.parse(JSON.stringify(state.objects)));
+  state.objects.push(obj);
+  render();
+  updateStatus('Объект добавлен');
+}
+
+function undo() { if (state.history.length) { state.objects = state.history.pop(); render(); updateStatus('Отменено'); } }
+function clearAll() { if (state.objects.length) { state.history.push(JSON.parse(JSON.stringify(state.objects))); state.objects = []; render(); updateStatus('Очищено'); } }
+
+function hitTest(mmX, mmY) {
+  const threshold = 5 / state.zoom;
+  for (let i = state.objects.length-1; i>=0; i--) {
+    const obj = state.objects[i];
+    if (obj.type === 'line') {
+      const dx = obj.x2 - obj.x, dy = obj.y2 - obj.y;
+      const len = Math.hypot(dx, dy);
+      if (len === 0) continue;
+      const t = Math.max(0, Math.min(1, ((mmX - obj.x)*dx + (mmY - obj.y)*dy) / (len*len)));
+      const px = obj.x + t*dx, py = obj.y + t*dy;
+      if (Math.hypot(mmX - px, mmY - py) < threshold) return i;
+    }
+    if (obj.type === 'rect') {
+      if (mmX >= obj.x - threshold && mmX <= obj.x + obj.w + threshold && mmY >= obj.y - threshold && mmY <= obj.y + obj.h + threshold) return i;
+    }
+    if (obj.type === 'circle') {
+      if (Math.abs(Math.hypot(mmX - obj.x, mmY - obj.y) - obj.r) < threshold) return i;
+    }
+    if (obj.type === 'dim') {
+      const dx = obj.x2 - obj.x, dy = obj.y2 - obj.y;
+      const len = Math.hypot(dx, dy);
+      if (len === 0) continue;
+      const ox = -dy / len * (obj.off || 0), oy = dx / len * (obj.off || 0);
+      const t = Math.max(0, Math.min(1, ((mmX - obj.x - ox)*dx + (mmY - obj.y - oy)*dy) / (len*len)));
+      const px = obj.x + ox + t*dx, py = obj.y + oy + t*dy;
+      if (Math.hypot(mmX - px, mmY - py) < threshold) return i;
+    }
+    if (obj.type === 'text') {
+      if (Math.hypot(mmX - obj.x, mmY - obj.y) < threshold) return i;
+    }
+  }
+  return -1;
+}
+
+let modalCallback = null;
+function showModal(title, fields, callback) {
+  document.getElementById('modalTitle').textContent = title;
+  const body = document.getElementById('modalBody');
+  body.innerHTML = '';
+  const modalData = {};
+  for (const f of fields) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `<label>${f.label}:</label>`;
+    if (f.type === 'number') {
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.value = f.value; inp.step = f.step || 1;
+      inp.dataset.field = f.key;
+      row.appendChild(inp);
+      modalData[f.key] = inp;
+    }
+    if (f.type === 'text') {
+      const inp = document.createElement('input');
+      inp.type = 'text'; inp.value = f.value;
+      inp.dataset.field = f.key;
+      row.appendChild(inp);
+      modalData[f.key] = inp;
+    }
+    if (f.type === 'checkbox') {
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = f.value;
+      cb.dataset.field = f.key;
+      row.appendChild(cb);
+      modalData[f.key] = cb;
+    }
+    if (f.type === 'select') {
+      const sel = document.createElement('select');
+      for (const opt of f.options) {
+        const option = document.createElement('option');
+        option.value = opt;
+        option.textContent = opt;
+        if (opt === f.value) option.selected = true;
+        sel.appendChild(option);
+      }
+      sel.dataset.field = f.key;
+      row.appendChild(sel);
+      modalData[f.key] = sel;
+    }
+    body.appendChild(row);
+  }
+  modalCallback = () => {
+    const result = {};
+    for (const key in modalData) {
+      if (modalData[key] instanceof HTMLInputElement) {
+        if (modalData[key].type === 'checkbox') result[key] = modalData[key].checked;
+        else result[key] = modalData[key].value;
+      } else if (modalData[key] instanceof HTMLSelectElement) {
+        result[key] = modalData[key].value;
+      } else result[key] = modalData[key];
+    }
+    document.getElementById('modalOverlay').classList.remove('show');
+    callback(result);
+  };
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function editModal(title, fields, cb) { state.editSnap = JSON.stringify(state.objects); showModal(title, fields, cb); }
+document.getElementById('modalOk').onclick = () => {
+  if (modalCallback) { if (state.editSnap) { state.history.push(JSON.parse(state.editSnap)); state.editSnap = null; } modalCallback(); }
+  modalCallback = null;
+};
+document.getElementById('modalCancel').onclick = () => { document.getElementById('modalOverlay').classList.remove('show'); modalCallback = null; state.editSnap = null; };
+
+canvas.addEventListener('mousedown', (e) => {
+  if (e.button !== 0 || e.altKey) return;
+  if (state.dimPending) {
+    const d = state.dimPending; state.dimPending = null;
+    addObject({ type: 'dim', x: d.x, y: d.y, x2: d.x2, y2: d.y2, off: d.off, color: '#e94560', lineWidth: 1 });
+    return;
+  }
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+  const { mmX, mmY } = screenToMm(sx, sy);
+
+  if (state.tool === 'eraser') {
+    state.drawing = true;
+    state.startX = mmX;
+    state.startY = mmY;
+    state.currentX = mmX;
+    state.currentY = mmY;
+    return;
+  }
+
+  if (e.shiftKey && state.tool === 'select') {
+    const idx = hitTest(mmX, mmY);
+    if (idx >= 0) {
+      state.history.push(JSON.parse(JSON.stringify(state.objects)));
+      state.objects.splice(idx, 1);
+      render();
+      updateStatus('Объект удалён');
+    }
+    return;
+  }
+
+  if (e.ctrlKey && state.tool === 'select') {
+    const idx = hitTest(mmX, mmY);
+    if (idx >= 0) {
+      const obj = state.objects[idx];
+      if (obj.type === 'rect') {
+        editModal('⬛ Параметры прямоугольника', [
+          { key: 'w', label: 'Ширина (мм)', type: 'number', value: obj.w, step: 1 },
+          { key: 'h', label: 'Высота (мм)', type: 'number', value: obj.h, step: 1 }
+        ], (res) => {
+          if (res.w) obj.w = parseFloat(res.w);
+          if (res.h) obj.h = parseFloat(res.h);
+          render();
+          updateStatus('Прямоугольник изменён');
+        });
+        return;
+      }
+      if (obj.type === 'circle') {
+        editModal('⚪ Параметры окружности', [
+          { key: 'diameter', label: 'Диаметр (мм)', type: 'number', value: (obj.r * 2).toFixed(1), step: 1 },
+          { key: 'showCirc', label: 'Показывать длину окружности', type: 'checkbox', value: obj.showCirc || false }
+        ], (res) => {
+          const newD = parseFloat(res.diameter);
+          if (!isNaN(newD) && newD > 0) obj.r = newD / 2;
+          obj.showCirc = !!res.showCirc;
+          render();
+          updateStatus('Окружность изменена');
+        });
+        return;
+      }
+      if (obj.type === 'line' && !obj.isEraser) {
+        const len = Math.hypot(obj.x2 - obj.x, obj.y2 - obj.y);
+        const angle = Math.atan2(obj.y2 - obj.y, obj.x2 - obj.x) * 180 / Math.PI;
+        editModal('📏 Параметры линии', [
+          { key: 'len', label: 'Длина (мм)', type: 'number', value: len.toFixed(1), step: 1 },
+          { key: 'angle', label: 'Угол (градусы)', type: 'number', value: angle.toFixed(1), step: 1 },
+          { key: 'showLength', label: 'Задать длину (показывать размер)', type: 'checkbox', value: obj.showLength !== false },
+          { key: 'lineType', label: 'Тип линии', type: 'select', options: ['solid', 'dashed', 'dashdot', 'dotted'], value: obj.lineType || state.lineType },
+          { key: 'lineWidth', label: 'Толщина (px)', type: 'number', value: obj.lineWidth || state.lineWidth, step: 1 }
+        ], (res) => {
+          const newLen = parseFloat(res.len);
+          const newAngle = parseFloat(res.angle) * Math.PI / 180;
+          if (!isNaN(newLen) && newLen > 0) {
+            obj.x2 = obj.x + newLen * Math.cos(newAngle);
+            obj.y2 = obj.y + newLen * Math.sin(newAngle);
+          }
+          obj.showLength = res.showLength !== undefined ? res.showLength : true;
+          if (res.lineType) obj.lineType = res.lineType;
+          if (res.lineWidth) obj.lineWidth = parseInt(res.lineWidth);
+          render();
+          updateStatus('Линия изменена');
+        });
+        return;
+      }
+      if (obj.type === 'text') {
+        editModal('🔤 Редактировать текст', [
+          { key: 'text', label: 'Текст', type: 'text', value: obj.text },
+          { key: 'font', label: 'Размер шрифта', type: 'number', value: obj.font || 12, step: 1 }
+        ], (res) => {
+          if (res.text) obj.text = res.text;
+          if (res.font) obj.font = parseFloat(res.font);
+          render();
+        });
+        return;
+      }
+    }
+    return;
+  }
+
+  if (state.tool === 'select') {
+    const idx = hitTest(mmX, mmY);
+    if (idx >= 0) {
+      state.selectedId = idx;
+      state.pendingSnap = JSON.parse(JSON.stringify(state.objects));
+      state.dragOffset = { dx: mmX - state.objects[idx].x, dy: mmY - state.objects[idx].y };
+    } else {
+      state.selectedId = null;
+      state.dragOffset = null;
+    }
+    render();
+    return;
+  }
+
+  state.drawing = true;
+  state.startX = mmX;
+  state.startY = mmY;
+  state.currentX = mmX;
+  state.currentY = mmY;
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+  const { mmX, mmY } = screenToMm(sx, sy);
+
+  if (state.dimPending) {
+    const d = state.dimPending, L = Math.hypot(d.x2 - d.x, d.y2 - d.y) || 1;
+    d.off = Math.round(((mmX - d.x) * (-(d.y2 - d.y) / L) + (mmY - d.y) * ((d.x2 - d.x) / L)) * 2) / 2;
+    render(); updateStatus('Положение размерной линии: клик — поставить, Esc — отмена');
+    return;
+  }
+
+  if (state.tool === 'select' && state.selectedId !== null && state.dragOffset && e.buttons === 1) {
+    if (state.pendingSnap) { state.history.push(state.pendingSnap); state.pendingSnap = null; }
+    const obj = state.objects[state.selectedId];
+    const snapped = snapToGeometry(mmX - state.dragOffset.dx, mmY - state.dragOffset.dy);
+    const dx = snapped.mmX - obj.x;
+    const dy = snapped.mmY - obj.y;
+    if (obj.type === 'line') { obj.x += dx; obj.y += dy; obj.x2 += dx; obj.y2 += dy; }
+    else if (obj.type === 'rect') { obj.x += dx; obj.y += dy; }
+    else if (obj.type === 'circle') { obj.x += dx; obj.y += dy; }
+    else if (obj.type === 'dim') { obj.x += dx; obj.y += dy; obj.x2 += dx; obj.y2 += dy; }
+    else if (obj.type === 'text') { obj.x += dx; obj.y += dy; }
+    render();
+    return;
+  }
+
+  if (state.drawing) {
+    const snapped = snapToGeometry(mmX, mmY);
+    state.currentX = snapped.mmX;
+    state.currentY = snapped.mmY;
+    render();
+    updateStatus(`📐 (${state.startX.toFixed(0)}, ${state.startY.toFixed(0)}) → (${snapped.mmX.toFixed(0)}, ${snapped.mmY.toFixed(0)}) ${snapped.snapped ? '🔗' : ''}`);
+    return;
+  }
+
+  const idx = hitTest(mmX, mmY);
+  if (idx >= 0) {
+    canvas.style.cursor = 'pointer';
+    updateStatus(`🔍 Объект #${idx} (${state.objects[idx].type})`);
+  } else {
+    canvas.style.cursor = state.tool === 'select' ? 'default' : 'crosshair';
+    updateStatus(`📍 (${mmX.toFixed(0)}, ${mmY.toFixed(0)}) мм`);
+  }
+});
+
+canvas.addEventListener('mouseup', (e) => {
+  if (state.tool === 'eraser' && state.drawing) {
+    state.drawing = false;
+    const dx = state.currentX - state.startX;
+    const dy = state.currentY - state.startY;
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+    state.history.push(JSON.parse(JSON.stringify(state.objects)));
+    state.objects.push({
+      type: 'line',
+      x: state.startX, y: state.startY,
+      x2: state.currentX, y2: state.currentY,
+      color: '#0d0d1a',
+      lineWidth: state.eraserWidth,
+      lineType: 'solid',
+      isEraser: true
+    });
+    render();
+    updateStatus('Стёрто');
+    return;
+  }
+
+  if (!state.drawing) {
+    state.pendingSnap = null;
+    state.dragOffset = null;
+    return;
+  }
+
+  state.drawing = false;
+  const snapped = snapToGeometry(state.currentX, state.currentY);
+  const dx = snapped.mmX - state.startX;
+  const dy = snapped.mmY - state.startY;
+  if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) { render(); updateStatus('⚠️ Слишком маленький объект'); return; }
+
+  const obj = { color: state.color, lineWidth: state.lineWidth, lineType: state.lineType };
+
+  if (state.manualMode) {
+    if (state.tool === 'line') {
+      obj.type = 'line'; obj.x = state.startX; obj.y = state.startY; obj.x2 = snapped.mmX; obj.y2 = snapped.mmY; obj.showLength = true;
+      addObject(obj);
+    } else if (state.tool === 'rect') {
+      obj.type = 'rect'; obj.x = Math.min(state.startX, snapped.mmX); obj.y = Math.min(state.startY, snapped.mmY);
+      obj.w = Math.abs(dx); obj.h = Math.abs(dy);
+      addObject(obj);
+    } else if (state.tool === 'circle') {
+      obj.type = 'circle'; obj.x = state.startX; obj.y = state.startY; obj.r = Math.hypot(dx, dy);
+      addObject(obj);
+    } else if (state.tool === 'dim') {
+      state.dimPending = { x: state.startX, y: state.startY, x2: snapped.mmX, y2: snapped.mmY, off: 0 };
+      render(); updateStatus('Укажите положение размерной линии (клик), Esc — отмена');
+      return;
+    } else if (state.tool === 'text') {
+      showModal('🔤 Введите текст', [
+        { key: 'text', label: 'Текст', type: 'text', value: '' },
+        { key: 'font', label: 'Размер шрифта', type: 'number', value: 12, step: 1 }
+      ], (res) => {
+        if (res.text && res.text.trim()) {
+          addObject({ type: 'text', x: state.startX, y: state.startY, text: res.text, font: parseFloat(res.font) || 12, color: state.color });
+        }
+      });
+      render();
+      return;
+    }
+    render();
+    updateStatus('Объект добавлен');
+    return;
+  }
+
+  // АВТОРЕЖИМ
+  if (state.tool === 'line') {
+    const len = Math.hypot(dx, dy);
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    showModal('📏 Параметры линии', [
+      { key: 'len', label: 'Длина (мм)', type: 'number', value: len.toFixed(1), step: 1 },
+      { key: 'angle', label: 'Угол (градусы)', type: 'number', value: angle.toFixed(1), step: 1 },
+      { key: 'showLength', label: 'Задать длину (показывать размер)', type: 'checkbox', value: true },
+      { key: 'lineType', label: 'Тип линии', type: 'select', options: ['solid', 'dashed', 'dashdot', 'dotted'], value: state.lineType },
+      { key: 'lineWidth', label: 'Толщина (px)', type: 'number', value: state.lineWidth, step: 1 }
+    ], (res) => {
+      const newLen = parseFloat(res.len);
+      const newAngle = parseFloat(res.angle) * Math.PI / 180;
+      if (!isNaN(newLen) && newLen > 0) {
+        const x2 = state.startX + newLen * Math.cos(newAngle);
+        const y2 = state.startY + newLen * Math.sin(newAngle);
+        addObject({ type: 'line', x: state.startX, y: state.startY, x2, y2, color: state.color, lineWidth: parseInt(res.lineWidth) || state.lineWidth, lineType: res.lineType || state.lineType, showLength: res.showLength });
+      }
+    });
+    render();
+    return;
+  }
+  if (state.tool === 'rect') {
+    const w = Math.abs(dx), h = Math.abs(dy);
+    const x = Math.min(state.startX, snapped.mmX);
+    const y = Math.min(state.startY, snapped.mmY);
+    showModal('⬛ Размеры прямоугольника', [
+      { key: 'w', label: 'Ширина (мм)', type: 'number', value: w, step: 1 },
+      { key: 'h', label: 'Высота (мм)', type: 'number', value: h, step: 1 }
+    ], (res) => {
+      const finalW = parseFloat(res.w);
+      const finalH = parseFloat(res.h);
+      if (finalW > 0 && finalH > 0) {
+        addObject({ type: 'rect', x, y, w: finalW, h: finalH, color: state.color, lineWidth: state.lineWidth, lineType: state.lineType });
+      }
+    });
+    render();
+    return;
+  }
+  if (state.tool === 'circle') {
+    const r = Math.hypot(dx, dy);
+    showModal('⚪ Размер окружности', [
+      { key: 'diameter', label: 'Диаметр (мм)', type: 'number', value: (r * 2).toFixed(1), step: 1 },
+      { key: 'showCirc', label: 'Показывать длину окружности', type: 'checkbox', value: false }
+    ], (res) => {
+      const diam = parseFloat(res.diameter);
+      if (diam > 0) {
+        addObject({ type: 'circle', x: state.startX, y: state.startY, r: diam / 2, showCirc: !!res.showCirc, color: state.color, lineWidth: state.lineWidth, lineType: state.lineType });
+      }
+    });
+    render();
+    return;
+  }
+  if (state.tool === 'dim') {
+    state.dimPending = { x: state.startX, y: state.startY, x2: snapped.mmX, y2: snapped.mmY, off: 0 };
+    updateStatus('Укажите положение размерной линии (клик), Esc — отмена');
+    render();
+    return;
+  }
+  if (state.tool === 'text') {
+    showModal('🔤 Введите текст', [
+      { key: 'text', label: 'Текст', type: 'text', value: '' },
+      { key: 'font', label: 'Размер шрифта', type: 'number', value: 12, step: 1 }
+    ], (res) => {
+      if (res.text && res.text.trim()) {
+        addObject({ type: 'text', x: state.startX, y: state.startY, text: res.text, font: parseFloat(res.font) || 12, color: state.color });
+      }
+    });
+    render();
+    return;
+  }
+  render();
+});
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  state.zoom = Math.max(0.05, Math.min(50, state.zoom * delta));
+  document.getElementById('zoomLabel').textContent = Math.round(state.zoom * 100) + '%';
+  render();
+  updateStatus(`🔍 ${Math.round(state.zoom * 100)}%`);
+}, { passive: false });
+
+canvas.addEventListener('mousedown', (e) => {
+  if (e.button === 1 || (e.button === 0 && e.altKey)) {
+    e.preventDefault();
+    const startPanX = state.panX, startPanY = state.panY, startMX = e.clientX, startMY = e.clientY;
+    const onMove = (ev) => { state.panX = startPanX + (ev.clientX - startMX); state.panY = startPanY + (ev.clientY - startMY); render(); };
+    const onUp = () => { canvas.removeEventListener('mousemove', onMove); canvas.removeEventListener('mouseup', onUp); };
+    canvas.addEventListener('mousemove', onMove); canvas.addEventListener('mouseup', onUp);
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && state.dimPending) { state.dimPending = null; render(); updateStatus('Размер отменён'); }
+  if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
+  if (e.key === 'Delete' && state.selectedId !== null && state.tool === 'select') {
+    state.history.push(JSON.parse(JSON.stringify(state.objects)));
+    state.objects.splice(state.selectedId, 1);
+    state.selectedId = null;
+    render();
+    updateStatus('Объект удалён');
+  }
+  const toolMap = { '1': 'line', '2': 'rect', '3': 'circle', '4': 'dim', '5': 'select', '6': 'text', '7': 'eraser' };
+  if (toolMap[e.key]) setTool(toolMap[e.key]);
+});
+
+function setTool(tool) {
+  state.tool = tool;
+  state.dimPending = null;
+  state.drawing = false;
+  state.selectedId = null;
+  state.dragOffset = null;
+  document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
+  canvas.style.cursor = tool === 'select' ? 'default' : 'crosshair';
+  updateStatus(`🔧 Инструмент: ${tool === 'eraser' ? 'Ластик' : tool}`);
+  render();
+}
+
+function setManualMode(enabled) {
+  state.manualMode = enabled;
+  autoModeBtn.classList.toggle('active', !enabled);
+  manualModeBtn.classList.toggle('active', enabled);
+  updateStatus(state.manualMode ? '✏️ Ручной режим' : '🤖 Авторежим');
+}
+
+document.querySelectorAll('[data-tool]').forEach(btn => btn.addEventListener('click', () => setTool(btn.dataset.tool)));
+autoModeBtn.addEventListener('click', () => setManualMode(false));
+manualModeBtn.addEventListener('click', () => setManualMode(true));
+document.getElementById('undoBtn').addEventListener('click', undo);
+document.getElementById('clearBtn').addEventListener('click', clearAll);
+document.getElementById('update3dBtn').addEventListener('click', () => { updateStatus('🔺 3D тень'); });
+document.getElementById('applyGrid').addEventListener('click', () => { state.gridSize = parseFloat(document.getElementById('gridSize').value) || 10; render(); updateStatus(`Сетка: ${state.gridSize} мм`); });
+document.getElementById('applyField').addEventListener('click', () => {
+  state.fieldW = (parseFloat(document.getElementById('fieldW').value) || 12) * 1000;
+  state.fieldH = (parseFloat(document.getElementById('fieldH').value) || 9) * 1000;
+  render();
+  updateStatus(`Поле: ${state.fieldW/1000} x ${state.fieldH/1000} м`);
+});
+document.getElementById('zoomIn').addEventListener('click', () => { state.zoom = Math.min(50, state.zoom * 1.3); document.getElementById('zoomLabel').textContent = Math.round(state.zoom*100)+'%'; render(); });
+document.getElementById('zoomOut').addEventListener('click', () => { state.zoom = Math.max(0.05, state.zoom / 1.3); document.getElementById('zoomLabel').textContent = Math.round(state.zoom*100)+'%'; render(); });
+document.getElementById('zoomReset').addEventListener('click', () => { state.zoom = 1; state.panX = 0; state.panY = 0; document.getElementById('zoomLabel').textContent = '100%'; render(); updateStatus('Вид сброшен'); });
+
+document.getElementById('savePdfBtn').addEventListener('click', () => openExportDialog());
+
+document.getElementById('lineWidth').addEventListener('change', (e) => { state.lineWidth = parseInt(e.target.value); });
+document.getElementById('lineType').addEventListener('change', (e) => { state.lineType = e.target.value; });
+document.getElementById('fontSizeDim').addEventListener('change', (e) => { state.fontSizeDim = parseInt(e.target.value); render(); });
+document.getElementById('eraserWidth').addEventListener('change', (e) => { state.eraserWidth = parseInt(e.target.value); });
+document.querySelectorAll('.color-swatch').forEach(sw => {
+  sw.addEventListener('click', () => {
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+    sw.classList.add('active');
+    state.color = sw.dataset.color;
+  });
+});
+
+// ========== JSON СОХРАНЕНИЕ / ЗАГРУЗКА (встроенные) ==========
+function saveJson() {
+    const data = {
+        theme: state.theme,
+        frame: state.frame,
+        frameScale: state.frameScale,
+        stamp: state.stamp,
+        objects: state.objects,
+        fieldW: state.fieldW,
+        fieldH: state.fieldH,
+        gridSize: state.gridSize,
+        color: state.color,
+        lineWidth: state.lineWidth,
+        fontSizeDim: state.fontSizeDim
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+    const link = document.createElement('a');
+    link.download = 'chertezh.json';
+    link.href = URL.createObjectURL(blob);
+    link.click();
+    updateStatus('💾 JSON сохранён');
+}
+document.getElementById('saveJsonBtn').addEventListener('click', saveJson);
+
+document.getElementById('importJsonBtn').addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                const data = JSON.parse(ev.target.result);
+                state.objects = data.objects || [];
+                setTheme(data.theme === 'light' ? 'light' : 'dark');
+                state.frame = data.frame || 'none'; state.frameScale = data.frameScale || 'auto'; state.stamp = Object.assign({}, data.stamp || {}); syncFrameUI();
+                state.fieldW = data.fieldW || 12000;
+                state.fieldH = data.fieldH || 9000;
+                state.gridSize = data.gridSize || 10;
+                state.color = data.color || '#ffffff';
+                state.lineWidth = data.lineWidth || 2;
+                state.fontSizeDim = data.fontSizeDim || 18;
+                
+                document.getElementById('fieldW').value = state.fieldW / 1000;
+                document.getElementById('fieldH').value = state.fieldH / 1000;
+                document.getElementById('gridSize').value = state.gridSize;
+                document.getElementById('lineWidth').value = state.lineWidth;
+                document.getElementById('fontSizeDim').value = state.fontSizeDim;
+                
+                const activeSw = [...document.querySelectorAll('.color-swatch')].find(sw => sw.dataset.color === state.color);
+                if (activeSw) {
+                    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+                    activeSw.classList.add('active');
+                }
+                
+                resizeCanvas();
+                render();
+                updateStatus('✅ JSON загружен');
+            } catch(err) {
+                updateStatus('❌ Ошибка загрузки JSON');
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+});
+
+
+// ========== ТЕМА ==========
+function setTheme(t) {
+  state.theme = t;
+  const light = t === 'light';
+  wrap.style.background = bgColor();
+  document.getElementById('themeBtn').textContent = light ? '⚫ Тёмный фон' : '⚪ Белый фон';
+  const cp = document.getElementById('colorPicker');
+  cp.style.opacity = light ? '0.35' : '1';
+  cp.style.pointerEvents = light ? 'none' : 'auto';
+  render();
+  updateStatus(light ? 'Белый фон: всё чёрное' : 'Тёмный фон');
+}
+document.getElementById('themeBtn').addEventListener('click', () => setTheme(state.theme === 'dark' ? 'light' : 'dark'));
+
+// ========== СОХРАНЕНИЕ: PNG / SVG / PDF ==========
+function getBounds(pad) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const add = (x, y) => { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); };
+  for (const o of state.objects) {
+    if (o.isEraser) continue;
+    if (o.type === 'rect') { add(o.x, o.y); add(o.x + o.w, o.y + o.h); }
+    else if (o.type === 'circle') { add(o.x - o.r, o.y - o.r); add(o.x + o.r, o.y + o.r); }
+    else if (o.type === 'line' || o.type === 'dim') {
+      add(o.x, o.y); add(o.x2, o.y2);
+      if (o.off) { const L = Math.hypot(o.x2 - o.x, o.y2 - o.y) || 1, ox = -(o.y2 - o.y) / L * o.off, oy = (o.x2 - o.x) / L * o.off; add(o.x + ox, o.y + oy); add(o.x2 + ox, o.y2 + oy); }
+    }
+    else add(o.x, o.y);
+  }
+  if (x0 === Infinity) return null;
+  const m = Math.max(x1 - x0, y1 - y0, 1) * (pad === undefined ? 0.1 : pad);
+  return { x0: x0 - m, y0: y0 - m, x1: x1 + m, y1: y1 + m };
+}
+
+function buildExportCanvas(side, withGrid, white) {
+  const B = exportBounds(); if (!B) return null;
+  const bw = B.x1 - B.x0, bh = B.y1 - B.y0, z = side / Math.max(bw, bh);
+  const cv = document.createElement('canvas');
+  cv.width = Math.max(1, Math.round(bw * z)); cv.height = Math.max(1, Math.round(bh * z));
+  const sv = { ctx, zoom: state.zoom, panX: state.panX, panY: state.panY, theme: state.theme, pxk, showGrid };
+  try {
+    ctx = cv.getContext('2d');
+    state.zoom = z; state.panX = -((B.x0 + B.x1) / 2) * z; state.panY = ((B.y0 + B.y1) / 2) * z;
+    if (white) state.theme = 'light';
+    pxk = side / 1500; showGrid = withGrid;
+    render();
+  } finally {
+    ctx = sv.ctx; state.zoom = sv.zoom; state.panX = sv.panX; state.panY = sv.panY;
+    state.theme = sv.theme; pxk = sv.pxk; showGrid = sv.showGrid;
+  }
+  return cv;
+}
+
+function buildSvg(white) {
+  const B = exportBounds(); if (!B) return null;
+  const bw = B.x1 - B.x0, bh = B.y1 - B.y0, k = Math.max(bw, bh) / 1500;
+  const light = white || state.theme === 'light', T = THEMES[light ? 'light' : 'dark'];
+  const sx = x => x - B.x0, sy = y => B.y1 - y, n = v => v.toFixed(2);
+  const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const fs = n(state.fontSizeDim * k);
+  const lab = (t, x, y, an) => `<text x="${n(x)}" y="${n(y)}" fill="${T.dim}" font-size="${fs}" font-family="monospace" text-anchor="${an || 'middle'}">${esc(t)}</text>`;
+  const out = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(bw)} ${n(bh)}" width="${n(frameGeom() ? frameGeom().Wp : bw)}mm" height="${n(frameGeom() ? frameGeom().Hp : bh)}mm">`,
+    `<rect width="${n(bw)}" height="${n(bh)}" fill="${T.bg}"/>`];
+  const Pp = p => `${n(sx(p[0]))},${n(sy(p[1]))}`;
+  const ahead = (tip, dir, col, sz) => { const bx = tip[0] - dir[0] * sz, by = tip[1] - dir[1] * sz; return `<polygon points="${Pp(tip)} ${Pp([bx - dir[1] * sz * 0.18, by + dir[0] * sz * 0.18])} ${Pp([bx + dir[1] * sz * 0.18, by - dir[0] * sz * 0.18])}" fill="${col}"/>`; };
+  const fg = frameGeom();
+  if (fg) {
+    const fc = light ? '#000000' : '#ffffff';
+    const Px = x => n(sx(fg.ox + x * fg.k)), Py = y => n(sy(fg.oy + y * fg.k));
+    for (const it of frameItems(fg)) {
+      if (it.t === 'r') out.push(`<rect x="${Px(it.x)}" y="${Py(it.y + it.h)}" width="${n(it.w * fg.k)}" height="${n(it.h * fg.k)}" stroke="${fc}" stroke-width="${n(it.lw * k)}" fill="none"/>`);
+      else if (it.t === 'l') out.push(`<line x1="${Px(it.x1)}" y1="${Py(it.y1)}" x2="${Px(it.x2)}" y2="${Py(it.y2)}" stroke="${fc}" stroke-width="${n(it.lw * k)}"/>`);
+      else out.push(`<text x="${Px(it.x)}" y="${Py(it.y)}" fill="${fc}" font-size="${n(it.s * fg.k)}" font-family="Arial,sans-serif" font-style="italic" text-anchor="middle" dominant-baseline="middle"${it.text.length * it.s * 0.55 > it.w ? ` textLength="${n(it.w * fg.k)}" lengthAdjust="spacingAndGlyphs"` : ''}>${esc(it.text)}</text>`);
+    }
+  }
+  for (const o of state.objects) {
+    const col = o.isEraser ? T.bg : (light ? '#000000' : (o.color || state.color));
+    const pat = getLineDash(o.lineType || 'solid').map(v => n(v * k)).join(' ');
+    const st = `stroke="${col}" stroke-width="${n((o.lineWidth || state.lineWidth) * k)}" fill="none"` + (pat ? ` stroke-dasharray="${pat}"` : '');
+    const dims = !o.isEraser && !state.manualMode;
+    if (o.type === 'dim') {
+      const dx = o.x2 - o.x, dy = o.y2 - o.y, L = Math.hypot(dx, dy);
+      if (L < 1e-6) continue;
+      const tx = dx / L, ty = dy / L, nx = -ty, ny = tx, off = o.off || 0, sg = off < 0 ? -1 : 1, g = 2 * k, e = 5 * k;
+      const d1 = [o.x + nx * off, o.y + ny * off], d2 = [o.x2 + nx * off, o.y2 + ny * off];
+      let p = '';
+      if (Math.abs(off) > g) p += `M${Pp([o.x + nx * sg * g, o.y + ny * sg * g])}L${Pp([d1[0] + nx * sg * e, d1[1] + ny * sg * e])}M${Pp([o.x2 + nx * sg * g, o.y2 + ny * sg * g])}L${Pp([d2[0] + nx * sg * e, d2[1] + ny * sg * e])}`;
+      p += `M${Pp(d1)}L${Pp(d2)}`;
+      out.push(`<path d="${p}" ${st}/>`, ahead(d1, [-tx, -ty], col, 12 * k), ahead(d2, [tx, ty], col, 12 * k));
+      let a = Math.atan2(ty, tx); if (a > Math.PI / 2 || a <= -Math.PI / 2) a += Math.PI;
+      out.push(`<text transform="translate(${Pp([(d1[0] + d2[0]) / 2, (d1[1] + d2[1]) / 2]).replace(',', ' ')}) rotate(${n(-a * 180 / Math.PI)})" x="0" y="${n(-4 * k)}" fill="${T.dim}" font-size="${fs}" font-family="monospace" text-anchor="middle">${esc(Math.hypot(dx, dy).toFixed(1) + ' мм')}</text>`);
+    } else if (o.type === 'line') {
+      out.push(`<line x1="${n(sx(o.x))}" y1="${n(sy(o.y))}" x2="${n(sx(o.x2))}" y2="${n(sy(o.y2))}" ${st}/>`);
+      if (o.type === 'dim' || (dims && o.showLength !== false))
+        out.push(lab(Math.hypot(o.x2 - o.x, o.y2 - o.y).toFixed(1) + ' мм', sx((o.x + o.x2) / 2), sy((o.y + o.y2) / 2) - 8 * k));
+    } else if (o.type === 'rect') {
+      out.push(`<rect x="${n(sx(o.x))}" y="${n(sy(o.y + o.h))}" width="${n(o.w)}" height="${n(o.h)}" ${st}/>`);
+      if (dims) {
+        out.push(lab(o.w.toFixed(1) + ' мм', sx(o.x + o.w / 2), sy(o.y - 15)));
+        out.push(lab(o.h.toFixed(1) + ' мм', sx(o.x + o.w + 15), sy(o.y + o.h / 2), 'start'));
+      }
+    } else if (o.type === 'circle') {
+      out.push(`<circle cx="${n(sx(o.x))}" cy="${n(sy(o.y))}" r="${n(o.r)}" ${st}/>`);
+      if (dims) {
+        const u = Math.SQRT1_2, A = [o.x - u * o.r, o.y - u * o.r], Bp = [o.x + u * o.r, o.y + u * o.r];
+        out.push(`<line x1="${n(sx(A[0]))}" y1="${n(sy(A[1]))}" x2="${n(sx(Bp[0]))}" y2="${n(sy(Bp[1]))}" stroke="${col}" stroke-width="${n(k)}"/>`, ahead(A, [-u, -u], col, 12 * k), ahead(Bp, [u, u], col, 12 * k));
+        out.push(lab(`⌀ ${(o.r * 2).toFixed(1)} мм`, sx(Bp[0]) + 10 * k, sy(Bp[1]) - 4 * k, 'start'));
+        if (o.showCirc) out.push(lab(`L=${(2 * Math.PI * o.r).toFixed(1)} мм`, sx(Bp[0]) + 10 * k, sy(Bp[1]) - 4 * k + fs * 1.15, 'start'));
+      }
+    } else if (o.type === 'text') {
+      out.push(`<text x="${n(sx(o.x))}" y="${n(sy(o.y))}" fill="${col}" font-size="${n((o.font || 12) * k)}" font-family="monospace" text-anchor="middle" dominant-baseline="middle">${esc(o.text || '')}</text>`);
+    }
+  }
+  out.push('</svg>');
+  return out.join('\n');
+}
+
+function buildPdf(cv, page) {
+  const mm = 2.83465;
+  let pw = (page === 'A3' ? 297 : 210) * mm, ph = (page === 'A3' ? 420 : 297) * mm;
+  if (cv.width >= cv.height) [pw, ph] = [ph, pw];
+  const m = (state.frame !== 'none' ? 0 : 10) * mm, s = Math.min((pw - 2 * m) / cv.width, (ph - 2 * m) / cv.height);
+  const w = cv.width * s, h = cv.height * s, x = (pw - w) / 2, y = (ph - h) / 2;
+  const jpg = Uint8Array.from(atob(cv.toDataURL('image/jpeg', 0.95).split(',')[1]), c => c.charCodeAt(0));
+  const enc = new TextEncoder(), parts = [], offs = []; let len = 0;
+  const push = d => { const b = typeof d === 'string' ? enc.encode(d) : d; parts.push(b); len += b.length; };
+  const obj = (i, d) => { offs[i] = len; push(`${i} 0 obj\n${d}\nendobj\n`); };
+  push('%PDF-1.4\n');
+  obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  obj(3, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pw.toFixed(2)} ${ph.toFixed(2)}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`);
+  offs[4] = len;
+  push(`4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${cv.width} /Height ${cv.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`);
+  push(jpg); push('\nendstream\nendobj\n');
+  const cs = `q ${w.toFixed(2)} 0 0 ${h.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)} cm /Im0 Do Q`;
+  obj(5, `<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`);
+  const xr = len; let t = 'xref\n0 6\n0000000000 65535 f \n';
+  for (let i = 1; i <= 5; i++) t += String(offs[i]).padStart(10, '0') + ' 00000 n \n';
+  push(t + `trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF`);
+  return new Blob(parts, { type: 'application/pdf' });
+}
+
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.download = name; a.href = URL.createObjectURL(blob); a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
+
+function openExportDialog() {
+  if (!getBounds()) { updateStatus('⚠️ Нечего сохранять'); return; }
+  showModal('💾 Сохранение чертежа', [
+    { key: 'fmt', label: 'Формат', type: 'select', options: ['PDF', 'PNG', 'SVG', 'JSON'], value: 'PDF' },
+    { key: 'side', label: 'Размер, px (PNG/PDF)', type: 'select', options: ['2000', '4000', '8000'], value: '4000' },
+    { key: 'page', label: 'Страница PDF', type: 'select', options: ['A4', 'A3'], value: 'A4' },
+    { key: 'grid', label: 'Сетка (PNG/PDF)', type: 'checkbox', value: false },
+    { key: 'white', label: 'Белый фон, чёрные линии (для печати)', type: 'checkbox', value: true }
+  ], res => {
+    try {
+      if (res.fmt === 'JSON') { saveJson(); return; }
+      if (res.fmt === 'SVG') downloadBlob(new Blob([buildSvg(res.white)], { type: 'image/svg+xml' }), 'chertezh.svg');
+      else {
+        const cv = buildExportCanvas(parseInt(res.side), res.grid, res.white);
+        if (res.fmt === 'PNG') cv.toBlob(b => downloadBlob(b, 'chertezh.png'));
+        else downloadBlob(buildPdf(cv, state.frame !== 'none' ? state.frame : res.page), 'chertezh.pdf');
+      }
+      updateStatus('💾 Сохранено: ' + res.fmt);
+    } catch (e) { updateStatus('❌ Ошибка сохранения: ' + e.message); }
+  });
+}
+
+// ========== РАМКА ПО ГОСТ 2.104 + ШТАМП (форма 1) ==========
+const SCALES = [['10:1',.1],['5:1',.2],['4:1',.25],['2.5:1',.4],['2:1',.5],['1:1',1],['1:2',2],['1:2.5',2.5],['1:4',4],['1:5',5],['1:10',10],['1:15',15],['1:20',20],['1:25',25],['1:40',40],['1:50',50],['1:75',75],['1:100',100],['1:200',200],['1:400',400],['1:500',500],['1:800',800],['1:1000',1000]];
+const ROLES = [['razrab','Разраб.',27.5],['prov','Пров.',22.5],['tk','Т. контр.',17.5],['nk','Н. контр.',7.5],['utv','Утв.',2.5]];
+
+// k = мм модели на 1 мм бумаги; лист A4 вертикально, A3 горизонтально
+function frameGeom() {
+  if (state.frame === 'none') return null;
+  const Wp = state.frame === 'A3' ? 420 : 210, Hp = 297;
+  const R = getBounds(0.05) || { x0: -50, y0: -50, x1: 50, y1: 50 };
+  let k;
+  if (state.frameScale === 'auto') {
+    const aw = (Wp - 25) * 0.92, ah = (Hp - 10 - 55) * 0.92;
+    k = SCALES[SCALES.length - 1][1];
+    for (const sc of SCALES) if ((R.x1 - R.x0) / sc[1] <= aw && (R.y1 - R.y0) / sc[1] <= ah) { k = sc[1]; break; }
+  } else k = parseFloat(state.frameScale);
+  const cx = (R.x0 + R.x1) / 2, cy = (R.y0 + R.y1) / 2;
+  const ox = cx - ((20 + Wp - 5) / 2) * k, oy = cy - ((60 + Hp - 5) / 2) * k;
+  return { Wp, Hp, k, ox, oy, sheet: { x0: ox, y0: oy, x1: ox + Wp * k, y1: oy + Hp * k } };
+}
+function exportBounds() { const g = frameGeom(); return g ? g.sheet : getBounds(); }
+
+// примитивы в мм бумаги (начало в левом нижнем углу листа, Y вверх)
+function frameItems(g) {
+  const st = state.stamp, it = [];
+  const r = (x, y, w, h, lw) => it.push({ t: 'r', x, y, w, h, lw });
+  const l = (x1, y1, x2, y2, lw) => it.push({ t: 'l', x1, y1, x2, y2, lw });
+  const tx = (x, y, s, text, w) => { if (text) it.push({ t: 't', x, y, s, text: String(text), w }); };
+  const X = g.Wp - 190, Y = 5;
+  r(0, 0, g.Wp, g.Hp, 0.5); r(20, 5, g.Wp - 25, g.Hp - 10, 2.5); r(X, Y, 185, 55, 2.5);
+  for (let y = 5; y < 55; y += 5) l(X, Y + y, X + 65, Y + y, 1);
+  l(X + 7, Y + 30, X + 7, Y + 55, 1);
+  for (const x of [17, 40, 55]) l(X + x, Y, X + x, Y + 55, 1);
+  l(X + 65, Y, X + 65, Y + 55, 2.5); l(X + 65, Y + 40, X + 185, Y + 40, 2.5);
+  l(X + 65, Y + 20, X + 185, Y + 20, 2.5); l(X + 135, Y + 20, X + 135, Y + 40, 2.5);
+  for (const y of [25, 30, 35]) l(X + 135, Y + y, X + 185, Y + y, 1);
+  for (const x of [140, 145]) l(X + x, Y + 30, X + x, Y + 35, 1);
+  for (const x of [150, 170]) l(X + x, Y + 30, X + x, Y + 40, 1);
+  l(X + 160, Y + 20, X + 160, Y + 30, 1);
+  const lab = (x, y, t, w) => tx(x, y, 2.5, t, w || 14);
+  lab(X + 3.5, Y + 32.5, 'Изм.', 7); lab(X + 12, Y + 32.5, 'Лист', 10); lab(X + 28.5, Y + 32.5, '№ докум.', 23);
+  lab(X + 47.5, Y + 32.5, 'Подп.', 15); lab(X + 60, Y + 32.5, 'Дата', 10);
+  lab(X + 142.5, Y + 37.5, 'Лит.'); lab(X + 160, Y + 37.5, 'Масса'); lab(X + 177.5, Y + 37.5, 'Масштаб');
+  lab(X + 147.5, Y + 27.5, 'Лист'); lab(X + 172.5, Y + 27.5, 'Листов');
+  for (const [key, name, y] of ROLES) {
+    lab(X + 8.5, Y + y, name, 16); tx(X + 28.5, Y + y, 3.5, st[key + 'N'], 22); tx(X + 60, Y + y, 3, st[key + 'D'], 9);
+  }
+  tx(X + 125, Y + 47.5, 5, st.desig, 115); tx(X + 100, Y + 30, 5, st.name, 65); tx(X + 125, Y + 10, 5, st.org, 115);
+  tx(X + 142.5, Y + 32.5, 3.5, st.lit, 14); tx(X + 160, Y + 32.5, 3.5, st.mass, 19);
+  const sc = SCALES.find(q => q[1] === g.k);
+  tx(X + 177.5, Y + 32.5, 3.5, sc ? sc[0] : '1:' + g.k, 14);
+  tx(X + 147.5, Y + 22.5, 3.5, st.sheet || '1', 23); tx(X + 172.5, Y + 22.5, 3.5, st.sheets || '1', 23);
+  return it;
+}
+
+function drawFrame() {
+  const g = frameGeom(); if (!g) return;
+  const c = state.theme === 'light' ? '#000000' : '#ffffff', pm = g.k * state.zoom;
+  const P = (x, y) => mmToScreen(g.ox + x * g.k, g.oy + y * g.k);
+  ctx.save(); ctx.setLineDash([]); ctx.strokeStyle = c; ctx.fillStyle = c;
+  for (const it of frameItems(g)) {
+    if (it.t === 'r') { const a = P(it.x, it.y), b = P(it.x + it.w, it.y + it.h); ctx.lineWidth = it.lw * pxk; ctx.strokeRect(a.x, b.y, b.x - a.x, a.y - b.y); }
+    else if (it.t === 'l') { const a = P(it.x1, it.y1), b = P(it.x2, it.y2); ctx.lineWidth = it.lw * pxk; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+    else { const p = P(it.x, it.y); ctx.font = `italic ${it.s * pm}px Arial, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(it.text, p.x, p.y, it.w * pm); }
+  }
+  ctx.restore();
+}
+
+function openStampDialog() {
+  const s = state.stamp;
+  const f = [['desig', 'Обозначение'], ['name', 'Наименование'], ['org', 'Организация'], ['lit', 'Литера'], ['mass', 'Масса'], ['sheet', 'Лист'], ['sheets', 'Листов']]
+    .map(([key, label]) => ({ key, label, type: 'text', value: s[key] || '' }));
+  for (const [key, name] of ROLES) {
+    f.push({ key: key + 'N', label: name + ' (фамилия)', type: 'text', value: s[key + 'N'] || '' });
+    f.push({ key: key + 'D', label: name + ' (дата)', type: 'text', value: s[key + 'D'] || '' });
+  }
+  showModal('📋 Основная надпись (масштаб подставляется сам)', f, res => { state.stamp = res; render(); updateStatus('Штамп заполнен'); });
+}
+
+const frameSel = document.getElementById('frameSel'), scaleSel = document.getElementById('frameScaleSel');
+scaleSel.innerHTML = '<option value="auto">Авто</option>' + SCALES.map(q => `<option value="${q[1]}">${q[0]}</option>`).join('');
+function syncFrameUI() { frameSel.value = state.frame; scaleSel.value = state.frameScale; render(); }
+frameSel.addEventListener('change', e => { state.frame = e.target.value; render(); updateStatus(state.frame === 'none' ? 'Рамка убрана' : 'Рамка ' + state.frame); });
+scaleSel.addEventListener('change', e => { state.frameScale = e.target.value; render(); updateStatus('Масштаб листа: ' + (e.target.value === 'auto' ? 'авто' : e.target.selectedOptions[0].text)); });
+document.getElementById('stampBtn').addEventListener('click', openStampDialog);
+
+function updateStatus(msg) {
+  const modeText = state.manualMode ? '✏️ Ручной' : '🤖 Авто';
+  statusBar.textContent = `✅ ${msg} | ${modeText} | ${state.tool === 'eraser' ? '🧽 Ластик' : state.tool} | 📐 ${Math.round(state.zoom * 100)}%`;
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+updateStatus('Готов');
+
+document.getElementById('fieldW').value = state.fieldW / 1000;
+document.getElementById('fieldH').value = state.fieldH / 1000;
+document.getElementById('gridSize').value = state.gridSize;
+</script>
+</body>
+</html>
